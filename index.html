@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vezo AI Pro</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background: white; padding: 2rem; border-radius: 24px; box-shadow: 0 12px 40px rgba(0,0,0,0.12); width: 90%; max-width: 400px; text-align: center; }
+        .upload-area { border: 2px dashed #d1d5db; padding: 1.5rem; border-radius: 16px; margin: 1rem 0; cursor: pointer; }
+        button { background: #c5a059; color: white; border: none; padding: 1rem; width: 100%; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        #status { font-size: 0.875rem; color: #6b7280; margin: 1rem 0; padding: 0.5rem; border-radius: 8px; background: #f9fafb; }
+        img { max-width: 100%; border-radius: 12px; margin-top: 1rem; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2 style="margin-top:0">Vezo AI Pro 🔥</h2>
+    <div class="upload-area" onclick="document.getElementById('upload').click()">
+        <input type="file" id="upload" accept="image/*" style="display:none">
+        <span id="file-name">اضغط هنا لاختيار صورة</span>
+    </div>
+    <button id="process-btn" onclick="removeBackground()">🚀 إزالة الخلفية</button>
+    <div id="status">⏳ جاري تهيئة النظام...</div>
+    <img id="result-img" alt="النتيجة">
+    <button id="download-btn" onclick="downloadResult()" style="display:none; background:#1f2937; margin-top:1rem">📥 تحميل الصورة</button>
+</div>
+
+<script type="module">
+    // استخدام مكتبة متوافقة تماماً مع أجهزة الأندرويد والآيفون
+    import imglyRemoveBackground from 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/+esm';
+
+    const status = document.getElementById('status');
+    const upload = document.getElementById('upload');
+    const resultImg = document.getElementById('result-img');
+    const processBtn = document.getElementById('process-btn');
+    const downloadBtn = document.getElementById('download-btn');
+
+    // إخفاء رسالة التحميل بمجرد جاهزية المكتبة
+    window.onload = () => { status.innerText = "✅ النظام جاهز للاستخدام"; };
+
+    upload.onchange = (e) => {
+        if(e.target.files[0]) document.getElementById('file-name').innerText = e.target.files[0].name;
+    };
+
+    window.removeBackground = async () => {
+        const file = upload.files[0];
+        if (!file) return alert("يرجى اختيار صورة أولاً");
+
+        try {
+            processBtn.disabled = true;
+            status.innerText = "⏳ جاري المعالجة... قد تستغرق 10-30 ثانية";
+            
+            // العملية الأساسية لإزالة الخلفية
+            const blob = await imglyRemoveBackground(file);
+            
+            const url = URL.createObjectURL(blob);
+            resultImg.src = url;
+            resultImg.style.display = 'block';
+            downloadBtn.style.display = 'block';
+            
+            status.innerText = "✨ تمت العملية بنجاح!";
+        } catch (error) {
+            console.error(error);
+            status.innerText = "❌ حدث خطأ، يرجى المحاولة مرة أخرى";
+        } finally {
+            processBtn.disabled = false;
+        }
+    };
+
+    window.downloadResult = () => {
+        const a = document.createElement('a');
+        a.href = resultImg.src;
+        a.download = 'vezo_no_bg.png';
+        a.click();
+    };
+</script>
+
+</body>
+</html>
+
