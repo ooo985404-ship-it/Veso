@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>Vezo AI - التحدي الأخير</title>
+    <script src="https://unpkg.com/ml5@latest/dist/ml5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #f0f2f5; text-align: center; padding: 20px; }
+        .card { background: white; max-width: 450px; margin: auto; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .upload-zone { border: 2px dashed #c5a059; padding: 30px; border-radius: 15px; margin: 20px 0; cursor: pointer; }
+        .btn { background: #c5a059; color: white; border: none; padding: 15px; width: 100%; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .btn:disabled { background: #ccc; }
+        #status { margin-top: 15px; font-size: 13px; color: #777; font-weight: bold; }
+        canvas { max-width: 100%; height: auto; border-radius: 10px; display: none; }
+        #preview { width: 100px; height: 100px; object-fit: contain; margin-top: 10px; display: none; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Vezo Offline Engine</h2>
+    <p style="font-size:12px; color:#999;">معالجة ذكية داخل جهازك (بدون انترنت وبدون كريدت)</p>
+
+    <div class="upload-zone" onclick="document.getElementById('f').click()">
+        <input type="file" id="f" accept="image/*" multiple style="display:none">
+        <strong>📂 اختر صور المنتجات</strong>
+    </div>
+
+    <button id="go" class="btn" onclick="processAll()">🚀 بدء التحدي (معالجة فورية)</button>
+    <button id="dlBtn" class="btn" style="display:none; margin-top:10px; background:#222;" onclick="downloadZip()">📥 تحميل الكل (ZIP)</button>
+
+    <div id="status">جاهز للاختبار..</div>
+    <img id="preview">
+</div>
+
+<canvas id="c"></canvas>
+
+<script>
+    let bodypix;
+    let results = [];
+
+    // تحميل الموديل فور فتح الصفحة ليكون جاهزاً
+    st("جاري تحميل محرك الذكاء الاصطناعي...");
+    bodypix = ml5.bodyPix({
+        architecture: 'MobileNetV1',
+        outputStride: 16,
+        multiplier: 0.75,
+        quantBytes: 2
+    }, () => st("✅ المحرك جاهز! ارفع الصور الآن."), (err) => st("❌ فشل تحميل المحرك"));
+
+    function st(t) { document.getElementById('status').innerText = t; }
+
+    async function processAll() {
+        const files = document.getElementById('f').files;
+        if (files.length === 0) return alert("اختر صور أولاً!");
+        
+        const btn = document.getElementById('go');
+        btn.disabled = true;
+        results = [];
+        
+        // عرض التنبيه للمستخدم أن المعالجة ستأخذ بعض الوقت
+        st("جاري فحص الصور... قد يستغرق بعض الوقت");
+
+        for (let i = 0; i < files.length; i++) {
+            st(`جاري فحص الصورة ${i+1}...`);
+
+            // تأكد من أن حجم الصورة ليس كبيراً
+            if (files[i].size > 5 * 1024 * 1024) {
+                alert("الرجاء اختيار صورة بحجم أقل من 5MB.");
+                return;
+            }
+
+            const imgUrl = URL.createObjectURL(files[i]);
+            const img = await loadImg(imgUrl);
+            
+            try {
+                const segmentation = await bodypix.segment(img);
+                const finalBlob = await removeBgWithMask(img, segmentation);
+                results.push({ name: `Vezo_Local_${i+1}.png`, blob: finalBlob });
+            } catch (error) {
+                console.error("خطأ في معالجة الصورة: ", error);
+                alert("حدث خطأ أثناء معالجة الصورة " + (i+1));
+                return;
+            }
+        }
+
+        st("✨ اكتملت المعالجة بنجاح!");
+        document.getElementById('dlBtn').style.display = "block";
+        btn.disabled = false;
+    }
+
+    function loadImg(src) {
+        return new Promise(res => {
+            const img = new Image();
+            img.src = src;
+            img.onload = () => res(img);
+        });
+    }
+
+    async function removeBgWithMask(img, seg) {
+        const cvs = document.getElementById('c');
+        const ctx = cvs.getContext('2d');
+        cvs.width = img.width;
+        cvs.height = img.height;
+
+        ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, cvs.width, cvs.height);
+        const pixels = imageData.data;
+
+        // مسح البكسلات التي ليست جزءاً من المنتج (الذكاء الاصطناعي يحددها)
+        for (let i = 0; i < pixels.length; i += 4) {
+            if (seg.data[i / 4] === 0) { // 0 تعني خلفية
+                pixels[i + 3] = 0; // جعلها شفافة
+            }
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+        return new Promise(res => cvs.toBlob(res, 'image/png'));
+    }
+
+    async function downloadZip() {
+        const zip = new JSZip();
+        results.forEach(r => zip.file(r.name, r.blob));
+        const blob = await zip.generateAsync({type:"blob"});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = "Vezo_Offline_Images.zip";
+        a.click();
+    }
+</script>
+
+</body>
+</html>
