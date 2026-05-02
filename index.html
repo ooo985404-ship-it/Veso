@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>Vezo Studio Pro - Choice Edition</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        :root { --gold: #c5a059; --dark: #1a1a1a; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f8f9fa; padding: 20px; text-align: center; }
+        .card { background: white; max-width: 500px; margin: auto; padding: 30px; border-radius: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.05); }
+        
+        /* تصميم اختيار الخلفية */
+        .bg-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px 0; }
+        .bg-opt { border: 2px solid #eee; border-radius: 12px; cursor: pointer; padding: 5px; transition: 0.3s; }
+        .bg-opt.active { border-color: var(--gold); background: #fffcf5; }
+        .bg-opt img { width: 100%; height: 60px; object-fit: cover; border-radius: 8px; display: block; }
+        .bg-opt span { font-size: 11px; margin-top: 5px; display: block; font-weight: bold; }
+
+        .upload-zone { border: 2px dashed var(--gold); padding: 30px; border-radius: 20px; margin: 20px 0; cursor: pointer; background: #fafafa; }
+        .btn { background: var(--gold); color: white; border: none; padding: 18px; width: 100%; border-radius: 15px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        #dlBtn { background: var(--dark); margin-top: 15px; display: none !important; }
+        #status { margin-top: 15px; font-size: 14px; color: #666; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Vezo Studio AI</h2>
+    <p style="color:#888; font-size:12px;">اختر الخلفية ثم ارفع صور منتجاتك</p>
+    
+    <div class="bg-selector">
+        <div class="bg-opt active" onclick="setMode(this, 'transparent')">
+            <div style="height:60px; background:#eee; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:20px;">🏁</div>
+            <span>شفافة</span>
+        </div>
+        <div class="bg-opt" onclick="setMode(this, 'colored', '#ffffff')">
+            <div style="height:60px; background:white; border:1px solid #ddd; border-radius:8px;"></div>
+            <span>أبيض نقي</span>
+        </div>
+        <div class="bg-opt" onclick="setMode(this, 'colored', '#f0f0f0')">
+            <div style="height:60px; background:#f0f0f0; border-radius:8px;"></div>
+            <span>رمادي هادئ</span>
+        </div>
+    </div>
+
+    <div class="upload-zone" onclick="document.getElementById('f').click()">
+        <input type="file" id="f" accept="image/*" multiple style="display:none">
+        <strong>✨ اضغط لرفع الصور</strong>
+    </div>
+
+    <button id="go" class="btn" onclick="startProcess()">🚀 بدء المعالجة</button>
+    <button id="dlBtn" class="btn" onclick="downloadZip()">📥 تحميل النتائج (ZIP)</button>
+    
+    <div id="status">جاهز للعمل</div>
+</div>
+
+<script>
+    let results = [];
+    let currentMode = 'transparent';
+    let bgColor = '';
+    const API_KEY = 'Sk_pr_vezo_3a42725de0f6914ad768eaaaf2eaf96d2786bab3';
+
+    function setMode(el, mode, color = '') {
+        currentMode = mode;
+        bgColor = color;
+        document.querySelectorAll('.bg-opt').forEach(o => o.classList.remove('active'));
+        el.classList.add('active');
+    }
+
+    async function startProcess() {
+        const files = document.getElementById('f').files;
+        if (files.length === 0) return alert("يرجى اختيار صور أولاً");
+
+        const btn = document.getElementById('go');
+        const st = document.getElementById('status');
+        btn.disabled = true;
+        results = [];
+
+        try {
+            for (let i = 0; i < files.length; i++) {
+                st.innerText = `جاري معالجة ${i+1} من ${files.length}...`;
+
+                const fd = new FormData();
+                fd.append('image_file', files[i]);
+                
+                // إعدادات Photoroom بناءً على اختيار العميل
+                if (currentMode === 'colored') {
+                    fd.append('background_color', bgColor);
+                }
+                
+                // إضافة ظل واقعي تلقائياً لجعل المنتج يبدو احترافياً
+                fd.append('shadow_preset', 'soft'); 
+
+                const res = await fetch('https://sdk.photoroom.com/v1/segment', {
+                    method: 'POST',
+                    headers: { 'x-api-key': API_KEY },
+                    body: fd
+                });
+
+                if (!res.ok) throw new Error("فشلت المعالجة، تأكد من رصيد المفتاح");
+
+                const blob = await res.blob();
+                results.push({ name: `Vezo_Studio_${i+1}.png`, blob: blob });
+            }
+
+            st.innerHTML = "<b style='color:green'>✅ اكتملت المعالجة بنجاح!</b>";
+            document.getElementById('dlBtn').style.setProperty('display', 'block', 'important');
+        } catch (e) {
+            alert(e.message);
+            st.innerText = "حدث خطأ.";
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    async function downloadZip() {
+        const zip = new JSZip();
+        results.forEach(r => zip.file(r.name, r.blob));
+        const content = await zip.generateAsync({type: "blob"});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(content);
+        a.download = "Vezo_Pro_Package.zip";
+        a.click();
+    }
+</script>
+
+</body>
+</html>
+
