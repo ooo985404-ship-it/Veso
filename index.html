@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vezo AI Studio - Final</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        :root { --primary: #c5a059; --dark: #1f2937; --success: #10b981; }
+        body { font-family: sans-serif; background: #f3f4f6; padding: 20px; display: flex; justify-content: center; margin: 0; }
+        .card { background: white; padding: 2rem; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 550px; text-align: center; }
+        
+        .upload-area { border: 2px dashed #ccc; padding: 25px; border-radius: 20px; margin-bottom: 20px; cursor: pointer; transition: 0.3s; background: #fff; }
+        .upload-area:hover { border-color: var(--primary); background: #fffcf5; }
+        
+        .templates-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(85px, 1fr)); gap: 12px; margin: 20px 0; }
+        .template-item { 
+            border: 3px solid #eee; border-radius: 15px; overflow: hidden; 
+            cursor: pointer; transition: 0.3s; background: #fff; position: relative;
+        }
+        .template-item img { width: 100%; height: 75px; object-fit: cover; display: block; }
+        .template-item span { font-size: 11px; padding: 6px; display: block; font-weight: bold; color: #555; background: #fafafa; }
+        
+        .template-item.active { border-color: var(--primary); transform: scale(1.08); box-shadow: 0 8px 20px rgba(197, 160, 89, 0.4); z-index: 2; }
+        .template-item.active span { background: var(--primary); color: white; }
+
+        .progress-box { display: none; margin: 20px 0; }
+        .bar-bg { width: 100%; height: 12px; background: #eee; border-radius: 6px; overflow: hidden; }
+        .bar-fill { width: 0%; height: 100%; background: var(--primary); transition: 0.4s; }
+        
+        .main-btn { background: var(--primary); color: white; border: none; padding: 16px; width: 100%; border-radius: 14px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 12px rgba(197,160,89,0.2); }
+        .main-btn:disabled { background: #cbd5e1; cursor: not-allowed; transform: none; }
+        .zip-btn { background: var(--dark); margin-top: 12px; display: none; }
+
+        canvas { display: none; }
+        #status { font-size: 13px; color: #64748b; margin-top: 12px; font-weight: 500; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2 style="margin-bottom:8px; color:var(--dark);">✨ Vezo AI Studio</h2>
+    <p style="font-size:13px; color:#666; margin-bottom:25px;">اختر التصميم المناسب لمنتجاتك قبل البدء</p>
+
+    <h4 style="text-align:right; margin-bottom:12px; color:var(--dark);">1. اختر خلفية الاستوديو:</h4>
+    <div class="templates-grid" id="tplGrid">
+        <div class="template-item active" onclick="selectTpl('sadu.png', this)">
+            <img src="sadu.png"><span>سدو</span>
+        </div>
+        <div class="template-item" onclick="selectTpl('ksanat.png', this)">
+            <img src="ksanat.png"><span>وطني</span>
+        </div>
+        <div class="template-item" onclick="selectTpl('founding.png', this)">
+            <img src="founding.png"><span>التأسيس</span>
+        </div>
+        <div class="template-item" onclick="selectTpl('lgrey.png', this)">
+            <img src="lgrey.png"><span>رمادي</span>
+        </div>
+        <div class="template-item" onclick="selectTpl('grad.png', this)">
+            <img src="grad.png"><span>متدرج</span>
+        </div>
+    </div>
+
+    <h4 style="text-align:right; margin-bottom:12px; color:var(--dark);">2. ارفع صور المنتجات:</h4>
+    <div class="upload-area" onclick="document.getElementById('imageInput').click()">
+        <input type="file" id="imageInput" accept="image/*" multiple style="display:none">
+        <div id="uploadText">📁 اضغط لاختيار حتى 10 صور</div>
+    </div>
+
+    <div class="progress-box" id="pBox">
+        <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:6px; font-weight:bold;">
+            <span id="pText">جاري المعالجة...</span>
+            <span id="pPerc">0%</span>
+        </div>
+        <div class="bar-bg"><div class="bar-fill" id="pFill"></div></div>
+    </div>
+
+    <button id="processBtn" class="main-btn" onclick="startProduction()">🚀 بدء المعالجة الجماعية</button>
+    <button id="zipBtn" class="main-btn zip-btn" onclick="downloadZip()">📥 تحميل النتائج (ZIP)</button>
+    
+    <div id="status">جاهز للاستخدام</div>
+</div>
+
+<canvas id="mainCanvas"></canvas>
+
+<script>
+    let processedFiles = [];
+    let selectedTpl = 'sadu.png';
+    const API_KEY = 'Kxns19EXihefmvtjJBnANqHb'; // المفتاح الجديد الخاص بك
+
+    function selectTpl(url, el) {
+        selectedTpl = url;
+        document.querySelectorAll('.template-item').forEach(i => i.classList.remove('active'));
+        el.classList.add('active');
+        document.getElementById('status').innerText = "تم اختيار خلفية: " + el.querySelector('span').innerText;
+    }
+
+    async function startProduction() {
+        const files = document.getElementById('imageInput').files;
+        if (files.length === 0) return alert("من فضلك اختر صور المنتجات أولاً");
+
+        const btn = document.getElementById('processBtn');
+        const pBox = document.getElementById('pBox');
+        const status = document.getElementById('status');
+        
+        btn.disabled = true;
+        pBox.style.display = 'block';
+        processedFiles = [];
+
+        try {
+            const bgImg = await loadImg(selectedTpl);
+
+            for (let i = 0; i < files.length; i++) {
+                status.innerText = `جاري معالجة الصورة ${i+1} من ${files.length}...`;
+                
+                try {
+                    // العودة لرابط Remove.bg
+                    const noBgBlob = await callRemoveBg(files[i]);
+                    const productImg = await loadImg(URL.createObjectURL(noBgBlob));
+                    const finalBlob = await mergeImages(bgImg, productImg);
+                    
+                    processedFiles.push({ name: `Vezo_Studio_${i+1}.png`, blob: finalBlob });
+                } catch (e) {
+                    console.error("خطأ في معالجة الملف:", files[i].name);
+                }
+
+                let progress = ((i + 1) / files.length) * 100;
+                document.getElementById('pFill').style.width = progress + '%';
+                document.getElementById('pPerc').innerText = Math.round(progress) + '%';
+                
+                await new Promise(r => setTimeout(r, 600));
+            }
+
+            status.innerText = "✨ تمت المهمة بنجاح!";
+            status.style.color = "var(--success)";
+            document.getElementById('zipBtn').style.display = 'block';
+        } catch (e) {
+            alert("حدث خطأ، تأكد من صحة المفتاح والرصيد");
+            console.error(e);
+        }
+        btn.disabled = false;
+    }
+
+    async function callRemoveBg(file) {
+        const formData = new FormData();
+        formData.append('image_file', file);
+        // تم استرجاع الرابط الأصلي لـ Remove.bg
+        const response = await fetch('
+
