@@ -40,25 +40,26 @@ h2 { margin-bottom:10px; }
   overflow:hidden;
   cursor:pointer;
   transition:0.3s;
-  position:relative;
 }
 
 .template img {
   width:100%;
   height:90px;
   object-fit:cover;
-  display:block;
 }
 
 .template input {
   display:none;
 }
 
-/* ⭐ عند الاختيار */
 .template.active {
   border-color:#c5a059;
   transform:scale(1.05);
   box-shadow:0 5px 15px rgba(197,160,89,0.4);
+}
+
+input[type="file"] {
+  margin-top:15px;
 }
 
 button {
@@ -79,7 +80,7 @@ button {
 <div class="card">
 
 <h2>✨ Vezo Studio</h2>
-<p>اختر الخلفية وارفع صورة المنتج</p>
+<p>اختر الخلفية وارفع حتى 10 صور</p>
 
 <form action="process.php" method="POST" enctype="multipart/form-data">
 
@@ -112,18 +113,16 @@ button {
 
 </div>
 
-<input type="file" name="product_image" required>
+<input type="file" name="product_images[]" multiple accept="image/*" required>
+<p>يمكنك رفع حتى 10 صور</p>
 
-<br>
-
-<button type="submit">🚀 معالجة الصورة</button>
+<button type="submit">🚀 معالجة الصور</button>
 
 </form>
 
 </div>
 
 <script>
-// ⭐ يخلي الضغط على الصورة يحددها
 const templates = document.querySelectorAll('.template');
 
 templates.forEach(t => {
