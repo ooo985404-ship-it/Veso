@@ -2,6 +2,14 @@
 
 function env(string $key, ?string $default = null): ?string
 {
+    // أولاً: اقرأ من Environment Variables في Render
+    $value = getenv($key);
+
+    if ($value !== false && $value !== '') {
+        return $value;
+    }
+
+    // ثانياً: اقرأ من ملف .env لو موجود
     static $env = null;
 
     if ($env === null) {
@@ -18,8 +26,8 @@ function env(string $key, ?string $default = null): ?string
                     continue;
                 }
 
-                [$name, $value] = array_pad(explode('=', $line, 2), 2, '');
-                $env[trim($name)] = trim($value);
+                [$name, $val] = array_pad(explode('=', $line, 2), 2, '');
+                $env[trim($name)] = trim($val);
             }
         }
     }
