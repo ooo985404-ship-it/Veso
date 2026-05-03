@@ -25,9 +25,7 @@ body {
   box-shadow:0 10px 30px rgba(0,0,0,0.1);
 }
 
-h2 {
-  margin-bottom:10px;
-}
+h2 { margin-bottom:10px; }
 
 .templates {
   display:grid;
@@ -38,29 +36,29 @@ h2 {
 
 .template {
   border:2px solid #ddd;
-  border-radius:10px;
+  border-radius:12px;
   overflow:hidden;
   cursor:pointer;
   transition:0.3s;
+  position:relative;
 }
 
 .template img {
   width:100%;
   height:90px;
   object-fit:cover;
+  display:block;
 }
 
 .template input {
   display:none;
 }
 
-.template:has(input:checked) {
+/* ⭐ عند الاختيار */
+.template.active {
   border-color:#c5a059;
   transform:scale(1.05);
-}
-
-input[type="file"] {
-  margin-top:15px;
+  box-shadow:0 5px 15px rgba(197,160,89,0.4);
 }
 
 button {
@@ -87,7 +85,7 @@ button {
 
 <div class="templates">
 
-<label class="template">
+<label class="template active">
   <input type="radio" name="template" value="sadu.png" checked>
   <img src="assets/templates/sadu.png">
 </label>
@@ -123,6 +121,19 @@ button {
 </form>
 
 </div>
+
+<script>
+// ⭐ يخلي الضغط على الصورة يحددها
+const templates = document.querySelectorAll('.template');
+
+templates.forEach(t => {
+  t.addEventListener('click', () => {
+    templates.forEach(el => el.classList.remove('active'));
+    t.classList.add('active');
+    t.querySelector('input').checked = true;
+  });
+});
+</script>
 
 </body>
 </html>
