@@ -71,18 +71,100 @@ try {
         throw new Exception('لم تتم معالجة أي صورة. تأكد من المفتاح أو رصيد remove.bg.');
     }
 
-    header('Content-Type: application/zip');
-    header('Content-Disposition: attachment; filename="' . $zipName . '"');
-    header('Content-Length: ' . filesize($zipPath));
-    header('Pragma: no-cache');
-    header('Expires: 0');
-
-    readfile($zipPath);
-    exit;
+    $downloadUrl = 'download.php?file=' . urlencode($zipName);
 
 } catch (Exception $e) {
-    http_response_code(500);
-    echo '<h2>حدث خطأ</h2>';
-    echo '<p>' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') . '</p>';
-    echo '<a href="index.php">رجوع</a>';
+    $error = $e->getMessage();
 }
+?>
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نتيجة المعالجة</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+  font-family: Arial, sans-serif;
+  background:#f3f4f6;
+  margin:0;
+  padding:15px;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.card {
+  background:#fff;
+  padding:22px;
+  width:100%;
+  max-width:420px;
+  border-radius:20px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.08);
+  text-align:center;
+}
+
+h2 {
+  margin:0 0 12px;
+  color:#1f2937;
+}
+
+p {
+  color:#555;
+  line-height:1.7;
+}
+
+.btn {
+  display:block;
+  width:100%;
+  padding:14px;
+  margin-top:12px;
+  border-radius:12px;
+  text-decoration:none;
+  font-weight:bold;
+  color:white;
+  background:#c5a059;
+}
+
+.btn.secondary {
+  background:#1f2937;
+}
+
+.error {
+  color:#dc2626;
+  font-weight:bold;
+}
+</style>
+</head>
+
+<body>
+<div class="card">
+
+<?php if (!empty($error)): ?>
+
+  <h2>حدث خطأ</h2>
+  <p class="error"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p>
+  <a class="btn secondary" href="index.php">رجوع</a>
+
+<?php else: ?>
+
+  <h2>✅ تمت المعالجة</h2>
+  <p>تمت معالجة <?= (int)$processed ?> صورة بنجاح.</p>
+
+  <a class="btn" href="<?= htmlspecialchars($downloadUrl, ENT_QUOTES, 'UTF-8') ?>">
+    📥 تنزيل ملف ZIP
+  </a>
+
+  <a class="btn secondary" href="index.php">
+    معالجة صور أخرى
+  </a>
+
+<?php endif; ?>
+
+</div>
+</body>
+</html>
