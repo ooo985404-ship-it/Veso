@@ -1,67 +1,88 @@
-```php
 <?php
 require_once __DIR__ . '/../app/config.php';
 require_once __DIR__ . '/../app/helpers.php';
 require_once __DIR__ . '/../app/RemoveBgService.php';
 require_once __DIR__ . '/../app/ImageProcessor.php';
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    die("طلب غير صالح");
-}
-
-$template = $_POST['template'] ?? 'sadu.png';
-$templatePath = __DIR__ . '/assets/templates/' . $template;
-
-if (!file_exists($templatePath)) {
-    die("الخلفية غير موجودة");
-}
-
-$files = $_FILES['product_images'];
-
-if (count($files['name']) > 10) {
-    die("الحد الأقصى 10 صور");
-}
-
-$removeBg = new RemoveBgService(env('REMOVE_BG_API_KEY'));
-$processor = new ImageProcessor();
-
-$zip = new ZipArchive();
-$zipName = 'result_' . time() . '.zip';
-$zipPath = __DIR__ . '/../storage/' . $zipName;
-
-if ($zip->open($zipPath, ZipArchive::CREATE) !== TRUE) {
-    die("فشل إنشاء ZIP");
-}
-
-for ($i = 0; $i < count($files['name']); $i++) {
-
-    if ($files['error'][$i] !== UPLOAD_ERR_OK) continue;
-
-    $tmpFile = [
-        'name' => $files['name'][$i],
-        'tmp_name' => $files['tmp_name'][$i],
-        'error' => $files['error'][$i],
-        'size' => $files['size'][$i]
-    ];
-
-    try {
-        $uploadPath = save_uploaded_image($tmpFile);
-        $noBg = $removeBg->removeBackground($uploadPath);
-        $final = $processor->mergeWithBackground($templatePath, $noBg);
-
-        $zip->addFile($final, basename($final));
-
-    } catch (Exception $e) {
-        continue;
+try {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        throw new Exception('طلب غير صالح');
     }
+
+    $template = basename($_POST['template'] ?? 'sadu.png');
+    $templatePath = __DIR__ . '/assets/templates/' . $template;
+
+    if (!file_exists($templatePath)) {
+        throw new Exception('الخلفية غير موجودة');
+    }
+
+    if (empty($_FILES['product_images']['name'][0])) {
+        throw new Exception('لم يتم رفع صور');
+    }
+
+    $files = $_FILES['product_images'];
+    $count = count($files['name']);
+
+    if ($count > 10) {
+        throw new Exception('الحد الأقصى 10 صور فقط');
+    }
+
+    $removeBg = new RemoveBgService(env('REMOVE_BG_API_KEY'));
+    $processor = new ImageProcessor();
+
+    $zipName = 'vezo_results_' . date('Ymd_His') . '.zip';
+    $zipPath = STORAGE_PATH . '/processed/' . $zipName;
+
+    $zip = new ZipArchive();
+
+    if ($zip->open($zipPath, ZipArchive::CREATE) !== true) {
+        throw new Exception('فشل إنشاء ملف ZIP');
+    }
+
+    $processed = 0;
+
+    for ($i = 0; $i < $count; $i++) {
+        if ($files['error'][$i] !== UPLOAD_ERR_OK) {
+            continue;
+        }
+
+        $singleFile = [
+            'name' => $files['name'][$i],
+            'tmp_name' => $files['tmp_name'][$i],
+            'error' => $files['error'][$i],
+            'size' => $files['size'][$i],
+        ];
+
+        try {
+            $uploadPath = save_uploaded_image($singleFile);
+            $noBgPath = $removeBg->removeBackground($uploadPath);
+            $finalPath = $processor->mergeWithBackground($templatePath, $noBgPath);
+
+            $zip->addFile($finalPath, 'vezo_image_' . ($i + 1) . '.png');
+            $processed++;
+        } catch (Exception $e) {
+            continue;
+        }
+    }
+
+    $zip->close();
+
+    if ($processed === 0) {
+        throw new Exception('لم تتم معالجة أي صورة. تأكد من المفتاح أو رصيد remove.bg.');
+    }
+
+    header('Content-Type: application/zip');
+    header('Content-Disposition: attachment; filename="' . $zipName . '"');
+    header('Content-Length: ' . filesize($zipPath));
+    header('Pragma: no-cache');
+    header('Expires: 0');
+
+    readfile($zipPath);
+    exit;
+
+} catch (Exception $e) {
+    http_response_code(500);
+    echo '<h2>حدث خطأ</h2>';
+    echo '<p>' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') . '</p>';
+    echo '<a href="index.php">رجوع</a>';
 }
-
-$zip->close();
-
-header('Content-Type: application/zip');
-header('Content-Disposition: attachment; filename="'.$zipName.'"');
-header('Content-Length: ' . filesize($zipPath));
-
-readfile($zipPath);
-exit;
-```
