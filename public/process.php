@@ -9,11 +9,19 @@ try {
         throw new Exception('طلب غير صالح');
     }
 
-    $template = basename($_POST['template'] ?? 'sadu.png');
-    $templatePath = __DIR__ . '/assets/templates/' . $template;
+    $bg = $_POST['bg'] ?? '';
+
+    if ($bg === '') {
+        throw new Exception('اختر خلفية أولاً');
+    }
+
+    // حماية المسار
+    $bg = str_replace(['..', '\\'], '', $bg);
+
+    $templatePath = __DIR__ . '/' . $bg;
 
     if (!file_exists($templatePath)) {
-        throw new Exception('الخلفية غير موجودة');
+        throw new Exception('الخلفية غير موجودة: ' . $bg);
     }
 
     if (empty($_FILES['product_images']['name'][0])) {
