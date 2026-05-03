@@ -66,31 +66,3 @@ h2 {
 
 <label class="card">
 <input type="radio" name="bg" value="assets
-      <div class="file-box">
-        <input type="file" name="product_images[]" multiple accept="image/*" required>
-        <p>يمكنك اختيار حتى 10 صور</p>
-      </div>
-
-      <button type="submit">🚀 معالجة الصور</button>
-
-    </form>
-
-  </div>
-</div>
-
-<script>
-// اختيار الخلفية بالضغط
-const templates = document.querySelectorAll('.template');
-
-templates.forEach(t => {
-  t.addEventListener('click', () => {
-    templates.forEach(el => el.classList.remove('active'));
-    t.classList.add('active');
-    t.querySelector('input').checked = true;
-  });
-});
-</script>
-
-</body>
-</html>
-```
